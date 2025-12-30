@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProFile Converter – Online File Converter</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- AOS Animation -->
+  <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+
+  <!-- Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --primary:#2563eb;
+      --dark:#020617;
+      --soft:#f8fafc;
+      --muted:#64748b;
+    }
+    body{font-family:'Inter',sans-serif;background:var(--soft);}
+    .navbar{box-shadow:0 6px 30px rgba(0,0,0,.06);}
+
+    /* HERO */
+    .hero{background:#fff;padding:130px 0 70px;}
+    .hero h1 span{color:var(--primary);}    
+
+    /* CONVERTER */
+    .converter-wrap{background:linear-gradient(135deg,#1e40af,#2563eb);border-radius:20px;padding:35px;}
+    .step-box{background:#fff;border-radius:16px;padding:24px;height:100%;box-shadow:0 12px 30px rgba(0,0,0,.08);}
+
+    /* TRUST */
+    .trust-bar span{font-size:14px;color:var(--muted);margin-right:22px;}
+
+    /* PDF TOOLS */
+    .tools{background:#0b2a3f;color:#fff;padding:90px 0;}
+    .tool-card{background:#0f3a55;border-radius:16px;padding:24px;transition:.3s;height:100%;}
+    .tool-card i{font-size:28px;margin-bottom:10px;display:block;}
+    .tool-card:hover{transform:translateY(-10px);background:#135f88;}
+
+    /* FORMAT GRID */
+    .formats{padding:90px 0;background:#fff;}
+    .format-box{background:#f1f5f9;border-radius:16px;padding:24px;margin-bottom:22px;}
+    .format-box span{display:inline-block;background:#fff;padding:6px 12px;border-radius:20px;font-size:13px;margin:6px;}
+
+    /* WHY */
+    .why{background:var(--soft);padding:90px 0;}
+    .why-card{background:#fff;border-radius:18px;padding:32px;box-shadow:0 20px 50px rgba(0,0,0,.08);height:100%;text-align:center;transition:.3s;}
+    .why-card i{font-size:34px;color:var(--primary);margin-bottom:15px;}
+    .why-card:hover{transform:translateY(-8px);}    
+
+    /* FAQ */
+    .faq{padding:90px 0;background:#fff;}
+
+    /* TAGS */
+    .tags span{display:inline-block;background:#f1f5f9;border-radius:20px;padding:8px 14px;margin:6px;font-size:13px;}
+
+    /* FOOTER */
+    footer{background:var(--dark);color:#94a3b8;padding:80px 0 40px;}
+    footer a{color:#94a3b8;text-decoration:none;font-size:14px;}
+    footer a:hover{color:#fff;}
+    .footer-title{color:#fff;font-weight:600;margin-bottom:15px;}
+    .footer-bottom{border-top:1px solid #1e293b;margin-top:40px;padding-top:20px;font-size:13px;}
+
+    /* RESPONSIVE */
+    @media(max-width:768px){
+      .hero{padding-top:100px;}
+      .converter-wrap{padding:20px;}
+      .trust-bar span{display:block;margin:8px 0;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="navbar navbar-expand-lg bg-white fixed-top">
+  <div class="container">
+    <a class="navbar-brand fw-bold text-primary" href="#"><i class="bi bi-folder2-open"></i> ProFile</a>
+    <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#nav"><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse" id="nav">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item"><a class="nav-link" href="#">PDF Tools</a></li>
+        <li class="nav-item"><a class="nav-link" href="#">All Formats</a></li>
+        <li class="nav-item"><a class="nav-link" href="#">Support</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero text-center">
+  <div class="container" data-aos="fade-up">
+    <span class="badge bg-light text-dark">Trusted by thousands worldwide</span>
+    <h1 class="fw-bold mt-4">Free Online <span>File Converter</span></h1>
+    <p class="text-muted mb-5">Convert documents, images, audio & video — fast, secure and free</p>
+
+    <div class="converter-wrap" data-aos="zoom-in">
+      <div class="row g-4">
+        <div class="col-md-4">
+          <div class="step-box text-center">
+            <p class="fw-semibold"><i class="bi bi-upload"></i> Upload Files</p>
+            <button class="btn btn-primary w-100">Add Files</button>
+            <small class="text-muted">Drag & drop supported</small>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="step-box">
+            <p class="fw-semibold"><i class="bi bi-arrow-left-right"></i> Choose Format</p>
+            <select class="form-select"><option>Convert To</option><option>PDF</option><option>DOCX</option><option>PNG</option></select>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="step-box text-center">
+            <p class="fw-semibold"><i class="bi bi-lightning-charge"></i> Convert</p>
+            <button class="btn btn-success w-100">Convert Now</button>
+            <small class="text-muted">Fast processing</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="trust-bar mt-4">
+      <span><i class="bi bi-layers"></i> 700+ Formats</span>
+      <span><i class="bi bi-speedometer2"></i> Lightning Fast</span>
+      <span><i class="bi bi-shield-lock"></i> Secure</span>
+      <span><i class="bi bi-cloud"></i> Cloud Based</span>
+    </div>
+  </div>
+</section>
+
+<!-- PDF TOOLS -->
+<section class="tools">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">+
+      <h3>PDF Tools</h3>
+      <button class="btn btn-outline-light btn-sm">View All</button>
+    </div>
+    <div class="row g-4">
+      <div class="col-md-3" data-aos="fade-up"><div class="tool-card"><i class="bi bi-files"></i>Merge PDF</div></div>
+      <div class="col-md-3" data-aos="fade-up"><div class="tool-card"><i class="bi bi-scissors"></i>Split PDF</div></div>
+      <div class="col-md-3" data-aos="fade-up"><div class="tool-card"><i class="bi bi-arrows-collapse"></i>Compress PDF</div></div>
+      <div class="col-md-3" data-aos="fade-up"><div class="tool-card"><i class="bi bi-file-earmark-word"></i>PDF to Word</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- WHY -->
+<section class="why">
+  <div class="container">
+    <h3 class="text-center mb-5" data-aos="fade-up">Why Choose ProFile?</h3>
+    <div class="row g-4">
+      <div class="col-md-4" data-aos="zoom-in"><div class="why-card"><i class="bi bi-gift"></i><h6>Completely Free</h6><p class="text-muted">No hidden charges</p></div></div>
+      <div class="col-md-4" data-aos="zoom-in"><div class="why-card"><i class="bi bi-person-check"></i><h6>No Registration</h6><p class="text-muted">Start instantly</p></div></div>
+      <div class="col-md-4" data-aos="zoom-in"><div class="why-card"><i class="bi bi-lock"></i><h6>Secure & Private</h6><p class="text-muted">Auto file deletion</p></div></div>
+      <div class="col-md-4" data-aos="zoom-in"><div class="why-card"><i class="bi bi-lightning"></i><h6>Lightning Fast</h6><p class="text-muted">Optimized servers</p></div></div>
+      <div class="col-md-4" data-aos="zoom-in"><div class="why-card"><i class="bi bi-layers"></i><h6>700+ Formats</h6><p class="text-muted">All popular types</p></div></div>
+      <div class="col-md-4" data-aos="zoom-in"><div class="why-card"><i class="bi bi-browser-chrome"></i><h6>Web Based</h6><p class="text-muted">Works in browser</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->                                       
+<footer> 
+  <div class="container">
+    <div class="row">
+      <div class="col-md-4"><h6 class="footer-title">ProFile Converter</h6><p>Fast, secure and reliable online file conversion platform.</p></div>
+      <div class="col-md-3"><h6 class="footer-title">Tools</h6><a href="#">PDF Tools</a><br><a href="#">Image Tools</a><br><a href="#">Video Tools</a></div>
+      <div class="col-md-3"><h6 class="footer-title">Company</h6><a href="#">About</a><br><a href="#">Contact</a><br><a href="#">Privacy Policy</a></div>
+      <div class="col-md-2"><h6 class="footer-title">Follow</h6><a href="#">Twitter</a><br><a href="#">LinkedIn</a></div>
+    </div>
+    <div class="footer-bottom text-center">© 2025 ProFile Converter. All rights reserved.</div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+<script>AOS.init({duration:900,once:true});</script>
+</body>
+</html>
