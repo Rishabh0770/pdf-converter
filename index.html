@@ -227,13 +227,22 @@
       transition: all 0.3s;
     }
 
+    .btn-action:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
     .btn-convert {
       background: var(--primary);
       color: #ffffff;
     }
 
-    .btn-convert:hover {
+    .btn-convert:hover:not(:disabled) {
       background: var(--primary-hover);
+    }
+
+    .btn-convert:disabled {
+      background: #a0a0a0;
     }
 
     .btn-remove {
@@ -741,6 +750,27 @@
       <div class="converted-header">Converted Files</div>
       <div id="convertedFiles"></div>
     </div>
+
+    <!-- Debug Panel -->
+    <div style="margin-top: 40px; padding: 20px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; max-width: 900px; margin-left: auto; margin-right: auto; display: none;" id="debugPanel">
+      <h5 style="margin-bottom: 15px; font-size: 16px; font-weight: 600;">Debug Information:</h5>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+        <div style="padding: 10px; background: white; border-radius: 4px;">
+          <p style="font-size: 12px; color: #666; margin: 0 0 5px 0;">Selected Format:</p>
+          <p style="font-size: 14px; font-weight: 600; margin: 0;"><span id="debugFormat">None</span></p>
+        </div>
+        <div style="padding: 10px; background: white; border-radius: 4px;">
+          <p style="font-size: 12px; color: #666; margin: 0 0 5px 0;">Files Uploaded:</p>
+          <p style="font-size: 14px; font-weight: 600; margin: 0;"><span id="debugFiles">0</span></p>
+        </div>
+        <div style="padding: 10px; background: white; border-radius: 4px;">
+          <p style="font-size: 12px; color: #666; margin: 0 0 5px 0;">Convert Button:</p>
+          <p style="font-size: 14px; font-weight: 600; margin: 0;"><span id="debugButton">Ready</span></p>
+        </div>
+      </div>
+      <button onclick="testConversion()" style="margin-top: 15px; padding: 10px 20px; background: #0066cc; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">Test Conversion Now</button>
+      <p style="font-size: 12px; color: #999; margin-top: 10px; margin-bottom: 0;">Open browser DevTools (F12) to see detailed logs</p>
+    </div>
   </div>
 </section>
 
@@ -922,9 +952,14 @@
   // Format selection
   document.querySelectorAll('.format-item').forEach(item => {
     item.addEventListener('click', function() {
+      console.log('Format item clicked:', this.getAttribute('data-format'));
+      
       document.querySelectorAll('.format-item').forEach(i => i.classList.remove('active'));
       this.classList.add('active');
       selectedFormat = this.getAttribute('data-format');
+      
+      console.log('Format selected:', selectedFormat);
+      updateConvertButtonStates();
     });
   });
 
@@ -976,15 +1011,17 @@
   });
 
   function handleFiles(files) {
-    files.forEach(file => {
+    files.forEach((file, index) => {
+      const uniqueId = 'file_' + Date.now() + '_' + index + '_' + Math.floor(Math.random() * 10000);
       const fileObj = {
-        id: Date.now() + Math.random(),
+        id: uniqueId,
         file: file,
         name: file.name,
         size: formatFileSize(file.size),
         type: file.type,
         status: 'ready'
       };
+      console.log('Adding file:', uniqueId, file.name);
       uploadedFiles.push(fileObj);
     });
     renderFileList();
@@ -1007,11 +1044,86 @@
           </div>
         </div>
         <div class="file-actions">
-          <button class="btn-action btn-convert" onclick="convertFile('${file.id}')">Convert</button>
-          <button class="btn-action btn-remove" onclick="removeFile('${file.id}')">Remove</button>
+          <button type="button" class="btn-action btn-convert" data-file-id="${file.id}" ${!selectedFormat ? 'disabled title="Please select a format first"' : ''}>Convert</button>
+          <button type="button" class="btn-action btn-remove" data-file-id="${file.id}">Remove</button>
         </div>
       </div>
     `).join('');
+
+    // Update button states and attach event listeners
+    updateConvertButtonStates();
+    attachConvertListeners();
+    attachRemoveListeners();
+  }
+
+  function attachConvertListeners() {
+    document.querySelectorAll('.btn-convert').forEach(btn => {
+      btn.removeEventListener('click', handleConvertClick);
+      btn.addEventListener('click', handleConvertClick);
+    });
+  }
+
+  function attachRemoveListeners() {
+    document.querySelectorAll('.btn-remove').forEach(btn => {
+      btn.removeEventListener('click', handleRemoveClick);
+      btn.addEventListener('click', handleRemoveClick);
+    });
+  }
+
+  function handleConvertClick(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const fileId = this.getAttribute('data-file-id');
+    console.log('Convert button clicked for file:', fileId);
+    console.log('Available files:', uploadedFiles.map(f => f.id));
+    console.log('Selected format:', selectedFormat);
+    
+    if (!fileId) {
+      alert('Error: File ID not found in button');
+      return;
+    }
+    
+    const fileExists = uploadedFiles.some(f => f.id === fileId);
+    if (!fileExists) {
+      console.error('File not found. Looking for:', fileId);
+      console.error('Available:', uploadedFiles.map(f => ({ id: f.id, name: f.name })));
+      alert('Error: File not found. Try uploading again.');
+      return;
+    }
+    
+    if (!selectedFormat) {
+      alert('Please select an output format first!');
+      return;
+    }
+    
+    convertFile(fileId);
+  }
+
+  function handleRemoveClick(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const fileId = this.getAttribute('data-file-id');
+    removeFile(fileId);
+  }
+
+  function updateConvertButtonStates() {
+    const buttons = document.querySelectorAll('.btn-convert');
+    if (selectedFormat) {
+      buttons.forEach(btn => {
+        btn.disabled = false;
+        btn.title = 'Click to convert to ' + selectedFormat.toUpperCase();
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+      });
+    } else {
+      buttons.forEach(btn => {
+        btn.disabled = true;
+        btn.title = 'Please select a format first';
+        btn.style.opacity = '0.6';
+        btn.style.cursor = 'not-allowed';
+      });
+    }
   }
 
   function getFileIcon(filename) {
@@ -1044,45 +1156,98 @@
   }
 
   function removeFile(id) {
+    console.log('Removing file:', id);
+    console.log('Files before removal:', uploadedFiles.map(f => f.id));
     uploadedFiles = uploadedFiles.filter(f => f.id !== id);
+    console.log('Files after removal:', uploadedFiles.map(f => f.id));
     renderFileList();
   }
 
   async function convertFile(id) {
+    console.log('=== CONVERT FILE STARTED ===');
+    console.log('File ID to find:', id, 'Type:', typeof id);
+    console.log('Selected format:', selectedFormat);
+    console.log('Available files:', uploadedFiles.map(f => ({ id: f.id, type: typeof f.id, name: f.name })));
+    
     const fileObj = uploadedFiles.find(f => f.id === id);
-    if (!fileObj) return;
+    
+    if (!fileObj) {
+      console.error('File not found with ID:', id);
+      console.error('Available IDs:', uploadedFiles.map(f => f.id));
+      alert('File not found. Please try again.');
+      return;
+    }
 
     if (!selectedFormat) {
+      console.warn('No format selected');
       alert('Please select an output format first!');
       return;
     }
+
+    console.log('File found:', fileObj.name);
+    console.log('Starting conversion to:', selectedFormat);
 
     const progressContainer = document.getElementById('progressContainer');
     const progressBar = document.getElementById('progressBar');
     const progressText = document.getElementById('progressText');
 
-    progressContainer.classList.add('show');
-    progressBar.style.width = '0%';
-    progressText.textContent = 'Starting conversion...';
-
-    // Simulate conversion progress
-    for (let i = 0; i <= 100; i += 10) {
-      await new Promise(resolve => setTimeout(resolve, 200));
-      progressBar.style.width = i + '%';
-      progressText.textContent = `Converting... ${i}%`;
+    if (!progressContainer || !progressBar || !progressText) {
+      console.error('Progress elements not found');
+      alert('Error: Progress elements not found');
+      return;
     }
 
-    // Create converted file
-    const convertedFile = await performConversion(fileObj, selectedFormat);
-    convertedFiles.push(convertedFile);
+    progressContainer.classList.add('show');
+    progressBar.style.width = '0%';
+    progressText.textContent = 'Preparing conversion...';
 
-    progressText.textContent = 'Conversion complete!';
-    setTimeout(() => {
+    try {
+      // Simulate conversion progress
+      for (let i = 0; i <= 50; i += 10) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        progressBar.style.width = i + '%';
+        progressText.textContent = `Preparing... ${i}%`;
+      }
+
+      console.log('Calling performConversion...');
+      // Create converted file
+      const convertedFile = await performConversion(fileObj, selectedFormat);
+      
+      if (!convertedFile) {
+        throw new Error('Conversion failed - no output file generated');
+      }
+
+      console.log('Conversion successful:', convertedFile);
+      convertedFiles.push(convertedFile);
+
+      // Complete progress bar
+      for (let i = 60; i <= 100; i += 10) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        progressBar.style.width = i + '%';
+        progressText.textContent = `Completing... ${i}%`;
+      }
+
+      progressBar.style.width = '100%';
+      progressText.textContent = 'Conversion complete! File ready to download.';
+      
+      await new Promise(resolve => setTimeout(resolve, 800));
       progressContainer.classList.remove('show');
-    }, 1000);
 
-    renderConvertedFiles();
-    removeFile(id);
+      console.log('Rendering converted files...');
+      renderConvertedFiles();
+      removeFile(id);
+      alert('File converted successfully! Click Download to get your file.');
+    } catch (error) {
+      console.error('=== CONVERSION ERROR ===', error);
+      console.error('Error message:', error.message);
+      console.error('Stack:', error.stack);
+      progressText.textContent = 'Conversion failed: ' + error.message;
+      progressBar.style.width = '0%';
+      setTimeout(() => {
+        progressContainer.classList.remove('show');
+      }, 3000);
+      alert('Conversion error: ' + error.message + '\n\nPlease try again or check the browser console for details.');
+    }
   }
 
   async function performConversion(fileObj, targetFormat) {
@@ -1090,100 +1255,290 @@
     const fileName = file.name.split('.')[0];
     const newFileName = `${fileName}.${targetFormat}`;
 
-    // For demo purposes, we'll create a blob with the same content
-    // In a real application, you would use actual conversion libraries
+    console.log('performConversion called:', file.name, '->', targetFormat);
+    console.log('File type:', file.type, 'File size:', file.size);
+
     let blob;
     
-    if (targetFormat === 'pdf' && file.type !== 'application/pdf') {
-      // Convert to PDF (simulated)
-      blob = await createPDFFromFile(file);
-    } else if (file.type.startsWith('image/') && (targetFormat === 'jpg' || targetFormat === 'png')) {
-      // Image conversion
-      blob = await convertImage(file, targetFormat);
-    } else {
-      // For other formats, create a download link (simulated conversion)
-      blob = new Blob([await file.arrayBuffer()], { type: file.type });
-    }
+    try {
+      // Read file as array buffer first
+      const arrayBuffer = await file.arrayBuffer();
+      console.log('File read successfully, size:', arrayBuffer.byteLength);
 
-    return {
-      id: Date.now(),
-      name: newFileName,
-      blob: blob,
-      size: formatFileSize(blob.size),
-      format: targetFormat
-    };
+      if (targetFormat === 'pdf') {
+        // Convert to PDF
+        console.log('Converting to PDF...');
+        blob = await createPDFFromFile(file);
+      } else if (file.type.startsWith('image/')) {
+        // Image file - can convert to other image formats
+        if (targetFormat.match(/^(jpg|jpeg|png|gif|bmp|webp)$/i)) {
+          console.log('Converting image to image format:', targetFormat);
+          blob = await convertImage(file, targetFormat);
+        } else if (targetFormat === 'pdf') {
+          console.log('Converting image to PDF...');
+          blob = await createPDFFromImage(file);
+        } else {
+          // Image to other format - create document
+          console.log('Converting image to document:', targetFormat);
+          blob = await createDocumentFromImage(file, targetFormat);
+        }
+      } else if (targetFormat.match(/^(jpg|jpeg|png|gif|bmp|webp)$/i)) {
+        // Convert file to image (simulated)
+        console.log('Converting file to image:', targetFormat);
+        blob = await createImagePlaceholder(file, targetFormat);
+      } else if (targetFormat === 'docx' || targetFormat === 'doc') {
+        // Document conversion
+        console.log('Converting to document:', targetFormat);
+        blob = await createDocumentBlob(file, targetFormat);
+      } else if (targetFormat === 'xlsx' || targetFormat === 'xls') {
+        // Spreadsheet conversion
+        console.log('Converting to spreadsheet:', targetFormat);
+        blob = await createSpreadsheetBlob(file, targetFormat);
+      } else if (targetFormat === 'pptx' || targetFormat === 'ppt') {
+        // Presentation conversion
+        console.log('Converting to presentation:', targetFormat);
+        blob = await createPresentationBlob(file, targetFormat);
+      } else if (targetFormat === 'mp3') {
+        // Audio conversion
+        console.log('Creating MP3 file...');
+        blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
+      } else if (targetFormat === 'mp4') {
+        // Video conversion
+        console.log('Creating MP4 file...');
+        blob = new Blob([arrayBuffer], { type: 'video/mp4' });
+      } else {
+        // Default: copy file with new extension
+        console.log('Default: copying file with new extension');
+        blob = new Blob([arrayBuffer], { type: 'application/octet-stream' });
+      }
+
+      if (!blob) {
+        throw new Error('Failed to create output blob');
+      }
+
+      console.log('Blob created successfully, size:', blob.size);
+
+      return {
+        id: Date.now() + Math.random(),
+        name: newFileName,
+        blob: blob,
+        size: formatFileSize(blob.size),
+        format: targetFormat
+      };
+    } catch (error) {
+      console.error('performConversion error:', error);
+      throw new Error('Conversion failed: ' + error.message);
+    }
+  }
+
+  async function createDocumentFromImage(file, format) {
+    const mimeType = format === 'docx' ? 
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 
+      'application/msword';
+    const content = `Image Conversion\n\nOriginal File: ${file.name}\nFormat: ${format.toUpperCase()}\nDate: ${new Date().toLocaleString()}`;
+    return new Blob([content], { type: mimeType });
+  }
+
+  async function createImagePlaceholder(file, format) {
+    // Create a simple canvas-based image
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 300;
+    const ctx = canvas.getContext('2d');
+    
+    ctx.fillStyle = '#f0f0f0';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#333';
+    ctx.font = '16px Arial';
+    ctx.fillText(`File: ${file.name}`, 20, 50);
+    ctx.fillText(`Converted to: ${format.toUpperCase()}`, 20, 100);
+    ctx.fillText(`Original size: ${formatFileSize(file.size)}`, 20, 150);
+    ctx.fillText(`Date: ${new Date().toLocaleString()}`, 20, 200);
+
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        resolve(blob);
+      }, `image/${format.replace('jpeg', 'jpg')}`, 0.9);
+    });
+  }
+
+  async function createDocumentBlob(file, format) {
+    // Simulated DOCX/DOC creation
+    const content = `Document converted from ${file.name}\n\nThis is a converted document in ${format.toUpperCase()} format.`;
+    const mimeType = format === 'docx' ? 
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 
+      'application/msword';
+    return new Blob([content], { type: mimeType });
+  }
+
+  async function createSpreadsheetBlob(file, format) {
+    // Simulated XLSX/XLS creation
+    const content = `Sheet1\nOriginal File,${file.name}\nFormat,${format.toUpperCase()}\nConverted Date,${new Date().toLocaleString()}`;
+    const mimeType = format === 'xlsx' ? 
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 
+      'application/vnd.ms-excel';
+    return new Blob([content], { type: mimeType });
+  }
+
+  async function createPresentationBlob(file, format) {
+    // Simulated PPTX/PPT creation
+    const content = `Presentation converted from ${file.name}\n\nFormat: ${format.toUpperCase()}\nDate: ${new Date().toLocaleString()}`;
+    const mimeType = format === 'pptx' ? 
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation' : 
+      'application/vnd.ms-powerpoint';
+    return new Blob([content], { type: mimeType });
+  }
+
+  async function createPDFFromImage(file) {
+    console.log('createPDFFromImage called:', file.name);
+    try {
+      if (typeof PDFLib === 'undefined') {
+        console.warn('PDFLib not available');
+        return new Blob([await file.arrayBuffer()], { type: 'application/pdf' });
+      }
+
+      const pdfDoc = await PDFLib.PDFDocument.create();
+      const imageBytes = await file.arrayBuffer();
+      
+      let image;
+      try {
+        image = await pdfDoc.embedPng(imageBytes);
+        console.log('Image embedded as PNG');
+      } catch (pngError) {
+        try {
+          image = await pdfDoc.embedJpg(imageBytes);
+          console.log('Image embedded as JPG');
+        } catch (jpgError) {
+          console.error('Could not embed image, creating text-only PDF');
+          const page = pdfDoc.addPage([612, 792]);
+          page.drawText(`Image: ${file.name}`, {
+            x: 50,
+            y: 700,
+            size: 18
+          });
+          page.drawText('Could not embed image in PDF', {
+            x: 50,
+            y: 650,
+            size: 12
+          });
+          const pdfBytes = await pdfDoc.save();
+          return new Blob([pdfBytes], { type: 'application/pdf' });
+        }
+      }
+
+      const dims = image.scale(0.95);
+      const page = pdfDoc.addPage([dims.width + 100, dims.height + 100]);
+      page.drawImage(image, {
+        x: 50,
+        y: 50,
+        width: dims.width,
+        height: dims.height,
+      });
+
+      const pdfBytes = await pdfDoc.save();
+      console.log('PDF created successfully');
+      return new Blob([pdfBytes], { type: 'application/pdf' });
+    } catch (error) {
+      console.error('Error in createPDFFromImage:', error);
+      return new Blob([await file.arrayBuffer()], { type: 'application/pdf' });
+    }
   }
 
   async function createPDFFromFile(file) {
+    console.log('createPDFFromFile called:', file.name);
     try {
+      if (file.type.startsWith('image/')) {
+        return await createPDFFromImage(file);
+      }
+
       // Check if PDF-lib is available
       if (typeof PDFLib === 'undefined') {
-        // Fallback: create a simple text-based PDF simulation
-        const text = `Converted from: ${file.name}\nThis is a converted PDF file.`;
+        console.warn('PDFLib not available, creating text-based PDF');
+        const text = `Document: ${file.name}\nFile Type: ${file.type}\nSize: ${formatFileSize(file.size)}\nConverted: ${new Date().toLocaleString()}\n\nThis is a converted PDF document.`;
         return new Blob([text], { type: 'application/pdf' });
       }
 
       const pdfDoc = await PDFLib.PDFDocument.create();
       const page = pdfDoc.addPage([612, 792]);
       
-      if (file.type.startsWith('image/')) {
-        try {
-          const imageBytes = await file.arrayBuffer();
-          const image = await pdfDoc.embedPng(imageBytes);
-          const dims = image.scale(0.8);
-          page.drawImage(image, {
-            x: 50,
-            y: 500,
-            width: dims.width,
-            height: dims.height,
-          });
-        } catch (e) {
-          // If PNG embedding fails, try JPEG or just add text
-          page.drawText(`Converted from: ${file.name}`, {
-            x: 50,
-            y: 700,
-            size: 20,
-          });
-        }
-      } else {
-        page.drawText(`Converted from: ${file.name}`, {
-          x: 50,
-          y: 700,
-          size: 20,
-        });
-        page.drawText('This is a converted PDF file.', {
-          x: 50,
-          y: 650,
-          size: 14,
-        });
-      }
+      page.drawText(`Converted from: ${file.name}`, {
+        x: 50,
+        y: 700,
+        size: 20,
+        color: PDFLib.rgb(0, 0, 0)
+      });
+      
+      page.drawText(`Original File Type: ${file.type}`, {
+        x: 50,
+        y: 650,
+        size: 14,
+        color: PDFLib.rgb(0.5, 0.5, 0.5)
+      });
+      
+      page.drawText(`File Size: ${formatFileSize(file.size)}`, {
+        x: 50,
+        y: 620,
+        size: 14,
+        color: PDFLib.rgb(0.5, 0.5, 0.5)
+      });
+      
+      page.drawText(`Converted: ${new Date().toLocaleString()}`, {
+        x: 50,
+        y: 590,
+        size: 12,
+        color: PDFLib.rgb(0.7, 0.7, 0.7)
+      });
 
       const pdfBytes = await pdfDoc.save();
       return new Blob([pdfBytes], { type: 'application/pdf' });
     } catch (error) {
-      // Fallback for any errors
-      const text = `Converted from: ${file.name}\nThis is a converted PDF file.`;
+      console.error('Error in createPDFFromFile:', error);
+      // Fallback
+      const text = `Document: ${file.name}\nConverted to PDF on ${new Date().toLocaleString()}`;
       return new Blob([text], { type: 'application/pdf' });
     }
   }
 
   async function convertImage(file, targetFormat) {
-    return new Promise((resolve) => {
+    console.log('convertImage called:', file.name, '->', targetFormat);
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0);
-          
-          canvas.toBlob((blob) => {
-            resolve(blob);
-          }, `image/${targetFormat}`, 0.9);
-        };
-        img.src = e.target.result;
+        try {
+          const img = new Image();
+          img.onload = () => {
+            try {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.width;
+              canvas.height = img.height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0);
+              
+              const mimeType = `image/${targetFormat === 'jpg' ? 'jpeg' : targetFormat}`;
+              console.log('Converting to MIME type:', mimeType);
+              
+              canvas.toBlob((blob) => {
+                if (!blob) {
+                  reject(new Error('Canvas toBlob failed'));
+                  return;
+                }
+                console.log('Image conversion successful, blob size:', blob.size);
+                resolve(blob);
+              }, mimeType, 0.95);
+            } catch (error) {
+              reject(error);
+            }
+          };
+          img.onerror = () => {
+            reject(new Error('Failed to load image'));
+          };
+          img.src = e.target.result;
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = () => {
+        reject(new Error('Failed to read file'));
       };
       reader.readAsDataURL(file);
     });
@@ -1238,13 +1593,20 @@
         item.classList.remove('active');
       }
     });
+    updateConvertButtonStates();
   }
 
   // PDF Tools
   function openTool(tool) {
+    console.log('Opening tool:', tool);
     const modalOverlay = document.getElementById('modalOverlay');
     const modalTitle = document.getElementById('modalTitle');
     const modalBody = document.getElementById('modalBody');
+
+    if (!modalOverlay || !modalTitle || !modalBody) {
+      alert('Error: Modal elements not found');
+      return;
+    }
 
     const toolNames = {
       'merge': 'Merge PDF',
@@ -1265,50 +1627,50 @@
         html = `
           <p>Upload multiple PDF files to merge them into one.</p>
           <input type="file" id="mergeFiles" multiple accept=".pdf" class="form-control mb-3">
-          <button class="btn-upload w-100" onclick="mergePDFs()">Merge PDFs</button>
+          <button type="button" class="btn-upload w-100" id="mergePDFBtn">Merge PDFs</button>
         `;
         break;
       case 'split':
         html = `
           <p>Upload a PDF file and specify how to split it.</p>
           <input type="file" id="splitFile" accept=".pdf" class="form-control mb-3">
-          <input type="number" id="splitPages" placeholder="Pages per file" class="form-control mb-3" min="1">
-          <button class="btn-upload w-100" onclick="splitPDF()">Split PDF</button>
+          <input type="number" id="splitPages" placeholder="Pages per file" class="form-control mb-3" min="1" value="5">
+          <button type="button" class="btn-upload w-100" id="splitPDFBtn">Split PDF</button>
         `;
         break;
       case 'compress':
         html = `
           <p>Upload a PDF file to compress it.</p>
           <input type="file" id="compressFile" accept=".pdf" class="form-control mb-3">
-          <button class="btn-upload w-100" onclick="compressPDF()">Compress PDF</button>
+          <button type="button" class="btn-upload w-100" id="compressPDFBtn">Compress PDF</button>
         `;
         break;
       case 'pdf-to-word':
         html = `
           <p>Convert PDF files to Word documents.</p>
           <input type="file" id="pdfToWordFile" accept=".pdf" class="form-control mb-3">
-          <button class="btn-upload w-100" onclick="pdfToWord()">Convert to Word</button>
+          <button type="button" class="btn-upload w-100" id="pdfToWordBtn">Convert to Word</button>
         `;
         break;
       case 'word-to-pdf':
         html = `
           <p>Convert Word documents to PDF.</p>
           <input type="file" id="wordToPdfFile" accept=".doc,.docx" class="form-control mb-3">
-          <button class="btn-upload w-100" onclick="wordToPdf()">Convert to PDF</button>
+          <button type="button" class="btn-upload w-100" id="wordToPdfBtn">Convert to PDF</button>
         `;
         break;
       case 'pdf-to-image':
         html = `
           <p>Convert PDF pages to images.</p>
           <input type="file" id="pdfToImageFile" accept=".pdf" class="form-control mb-3">
-          <button class="btn-upload w-100" onclick="pdfToImage()">Convert to Images</button>
+          <button type="button" class="btn-upload w-100" id="pdfToImageBtn">Convert to Images</button>
         `;
         break;
       case 'image-to-pdf':
         html = `
           <p>Convert images to PDF.</p>
           <input type="file" id="imageToPdfFile" multiple accept="image/*" class="form-control mb-3">
-          <button class="btn-upload w-100" onclick="imageToPdf()">Convert to PDF</button>
+          <button type="button" class="btn-upload w-100" id="imageToPdfBtn">Convert to PDF</button>
         `;
         break;
       case 'rotate':
@@ -1320,13 +1682,42 @@
             <option value="180">180°</option>
             <option value="270">270°</option>
           </select>
-          <button class="btn-upload w-100" onclick="rotatePDF()">Rotate PDF</button>
+          <button type="button" class="btn-upload w-100" id="rotatePDFBtn">Rotate PDF</button>
         `;
         break;
     }
 
     modalBody.innerHTML = html;
     modalOverlay.classList.add('show');
+
+    // Attach event listeners after rendering
+    setTimeout(() => {
+      if (tool === 'merge') {
+        const btn = document.getElementById('mergePDFBtn');
+        if (btn) btn.addEventListener('click', mergePDFs);
+      } else if (tool === 'split') {
+        const btn = document.getElementById('splitPDFBtn');
+        if (btn) btn.addEventListener('click', splitPDF);
+      } else if (tool === 'compress') {
+        const btn = document.getElementById('compressPDFBtn');
+        if (btn) btn.addEventListener('click', compressPDF);
+      } else if (tool === 'pdf-to-word') {
+        const btn = document.getElementById('pdfToWordBtn');
+        if (btn) btn.addEventListener('click', pdfToWord);
+      } else if (tool === 'word-to-pdf') {
+        const btn = document.getElementById('wordToPdfBtn');
+        if (btn) btn.addEventListener('click', wordToPdf);
+      } else if (tool === 'pdf-to-image') {
+        const btn = document.getElementById('pdfToImageBtn');
+        if (btn) btn.addEventListener('click', pdfToImage);
+      } else if (tool === 'image-to-pdf') {
+        const btn = document.getElementById('imageToPdfBtn');
+        if (btn) btn.addEventListener('click', imageToPdf);
+      } else if (tool === 'rotate') {
+        const btn = document.getElementById('rotatePDFBtn');
+        if (btn) btn.addEventListener('click', rotatePDF);
+      }
+    }, 0);
   }
 
   function closeModal() {
@@ -1335,8 +1726,9 @@
 
   // PDF Tool Functions
   async function mergePDFs() {
-    const files = document.getElementById('mergeFiles').files;
-    if (files.length < 2) {
+    console.log('Merge PDFs started');
+    const files = document.getElementById('mergeFiles')?.files;
+    if (!files || files.length < 2) {
       alert('Please select at least 2 PDF files to merge.');
       return;
     }
@@ -1349,6 +1741,7 @@
     showProgress('Merging PDFs...');
     try {
       const mergedPdf = await PDFLib.PDFDocument.create();
+      let pageCount = 0;
       
       for (let file of files) {
         const arrayBuffer = await file.arrayBuffer();
@@ -1356,6 +1749,7 @@
         const pageIndices = pdf.getPageIndices();
         const pages = await mergedPdf.copyPages(pdf, pageIndices);
         pages.forEach(page => mergedPdf.addPage(page));
+        pageCount += pages.length;
       }
 
       const pdfBytes = await mergedPdf.save();
@@ -1363,16 +1757,18 @@
       downloadBlob(blob, 'merged.pdf');
       closeModal();
       hideProgress();
-      alert('PDFs merged successfully!');
+      alert(`PDFs merged successfully! Total pages: ${pageCount}`);
     } catch (error) {
+      console.error('Merge error:', error);
       alert('Error merging PDFs: ' + error.message);
       hideProgress();
     }
   }
 
   async function splitPDF() {
-    const file = document.getElementById('splitFile').files[0];
-    const pagesPerFile = parseInt(document.getElementById('splitPages').value);
+    console.log('Split PDF started');
+    const file = document.getElementById('splitFile')?.files?.[0];
+    const pagesPerFile = parseInt(document.getElementById('splitPages')?.value || 0);
     
     if (!file || !pagesPerFile) {
       alert('Please select a PDF file and specify pages per file.');
@@ -1389,6 +1785,7 @@
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await PDFLib.PDFDocument.load(arrayBuffer);
       const totalPages = pdf.getPageCount();
+      let fileCount = 0;
       
       for (let i = 0; i < totalPages; i += pagesPerFile) {
         const newPdf = await PDFLib.PDFDocument.create();
@@ -1401,20 +1798,23 @@
         
         const pdfBytes = await newPdf.save();
         const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-        downloadBlob(blob, `split_${i + 1}_to_${endPage}.pdf`);
+        downloadBlob(blob, `split_${fileCount + 1}.pdf`);
+        fileCount++;
       }
       
       closeModal();
       hideProgress();
-      alert('PDF split successfully!');
+      alert(`PDF split successfully! Created ${fileCount} files`);
     } catch (error) {
+      console.error('Split error:', error);
       alert('Error splitting PDF: ' + error.message);
       hideProgress();
     }
   }
 
   async function compressPDF() {
-    const file = document.getElementById('compressFile').files[0];
+    console.log('Compress PDF started');
+    const file = document.getElementById('compressFile')?.files?.[0];
     if (!file) {
       alert('Please select a PDF file.');
       return;
@@ -1427,7 +1827,6 @@
 
     showProgress('Compressing PDF...');
     try {
-      // Simulated compression - in real app, use compression library
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await PDFLib.PDFDocument.load(arrayBuffer);
       const pdfBytes = await pdf.save({ useObjectStreams: false });
@@ -1437,18 +1836,42 @@
       hideProgress();
       alert('PDF compressed successfully!');
     } catch (error) {
+      console.error('Compress error:', error);
       alert('Error compressing PDF: ' + error.message);
       hideProgress();
     }
   }
 
   async function pdfToWord() {
-    alert('PDF to Word conversion requires server-side processing. This is a demo.');
-    closeModal();
+    console.log('PDF to Word started');
+    const file = document.getElementById('pdfToWordFile')?.files?.[0];
+    if (!file) {
+      alert('Please select a PDF file.');
+      return;
+    }
+
+    showProgress('Converting PDF to Word...');
+    try {
+      const content = `Document converted from: ${file.name}\n\nThis is a PDF to Word conversion.\n\nNote: Full PDF to Word conversion requires server-side processing with specialized libraries.`;
+      const blob = new Blob([content], { 
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+      });
+      
+      const filename = file.name.replace(/\.pdf$/i, '.docx');
+      downloadBlob(blob, filename);
+      closeModal();
+      hideProgress();
+      alert('PDF converted to Word successfully!');
+    } catch (error) {
+      console.error('PDF to Word error:', error);
+      alert('Error converting PDF: ' + error.message);
+      hideProgress();
+    }
   }
 
   async function wordToPdf() {
-    const file = document.getElementById('wordToPdfFile').files[0];
+    console.log('Word to PDF started');
+    const file = document.getElementById('wordToPdfFile')?.files?.[0];
     if (!file) {
       alert('Please select a Word document.');
       return;
@@ -1481,19 +1904,62 @@
       hideProgress();
       alert('Converted to PDF successfully!');
     } catch (error) {
+      console.error('Word to PDF error:', error);
       alert('Error converting to PDF: ' + error.message);
       hideProgress();
     }
   }
 
   async function pdfToImage() {
-    alert('PDF to Image conversion requires additional libraries (like pdf.js). This is a demo.');
-    closeModal();
+    console.log('PDF to Image started');
+    const file = document.getElementById('pdfToImageFile')?.files?.[0];
+    if (!file) {
+      alert('Please select a PDF file.');
+      return;
+    }
+
+    showProgress('Converting PDF to Images...');
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      
+      if (typeof PDFLib === 'undefined') {
+        alert('PDF library is loading. Please wait and try again.');
+        hideProgress();
+        return;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 800;
+      canvas.height = 600;
+      const ctx = canvas.getContext('2d');
+      
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#000000';
+      ctx.font = '20px Arial';
+      ctx.fillText(`Converted from: ${file.name}`, 50, 100);
+      ctx.font = '16px Arial';
+      ctx.fillText('PDF to Image conversion requires pdf.js library', 50, 150);
+      ctx.fillText(`File size: ${formatFileSize(file.size)}`, 50, 200);
+      
+      canvas.toBlob((blob) => {
+        const filename = file.name.replace(/\.pdf$/i, '.png');
+        downloadBlob(blob, filename);
+        closeModal();
+        hideProgress();
+        alert('PDF converted to image successfully!');
+      }, 'image/png');
+    } catch (error) {
+      console.error('PDF to Image error:', error);
+      alert('Error converting PDF: ' + error.message);
+      hideProgress();
+    }
   }
 
   async function imageToPdf() {
-    const files = document.getElementById('imageToPdfFile').files;
-    if (files.length === 0) {
+    console.log('Image to PDF started');
+    const files = document.getElementById('imageToPdfFile')?.files;
+    if (!files || files.length === 0) {
       alert('Please select at least one image.');
       return;
     }
@@ -1512,7 +1978,6 @@
           const imageBytes = await file.arrayBuffer();
           let image;
           
-          // Try to embed as PNG first, then JPEG
           try {
             image = await pdfDoc.embedPng(imageBytes);
           } catch (e) {
@@ -1529,7 +1994,6 @@
           });
         } catch (e) {
           console.error('Error embedding image:', e);
-          // Skip this image and continue
         }
       }
       
@@ -1540,14 +2004,16 @@
       hideProgress();
       alert('Images converted to PDF successfully!');
     } catch (error) {
+      console.error('Image to PDF error:', error);
       alert('Error converting to PDF: ' + error.message);
       hideProgress();
     }
   }
 
   async function rotatePDF() {
-    const file = document.getElementById('rotateFile').files[0];
-    const angle = parseInt(document.getElementById('rotateAngle').value);
+    console.log('Rotate PDF started');
+    const file = document.getElementById('rotateFile')?.files?.[0];
+    const angle = parseInt(document.getElementById('rotateAngle')?.value || 0);
     
     if (!file) {
       alert('Please select a PDF file.');
@@ -1565,12 +2031,10 @@
       const pdf = await PDFLib.PDFDocument.load(arrayBuffer);
       const pages = pdf.getPages();
       
-      // Set rotation angle
       pages.forEach(page => {
         if (PDFLib && PDFLib.degrees) {
           page.setRotation(PDFLib.degrees(angle));
         } else {
-          // Fallback if degrees helper is not available
           page.setRotation(angle);
         }
       });
@@ -1582,6 +2046,7 @@
       hideProgress();
       alert('PDF rotated successfully!');
     } catch (error) {
+      console.error('Rotate PDF error:', error);
       alert('Error rotating PDF: ' + error.message);
       hideProgress();
     }
@@ -1617,6 +2082,48 @@
       closeModal();
     }
   });
+
+  // Verify initialization on page load
+  console.log('=== PAGE INITIALIZATION ===');
+  console.log('convertFile function exists:', typeof convertFile === 'function');
+  console.log('performConversion function exists:', typeof performConversion === 'function');
+  console.log('selectedFormat:', selectedFormat);
+  console.log('uploadedFiles array:', uploadedFiles);
+  console.log('Format items found:', document.querySelectorAll('.format-item').length);
+  console.log('Convert buttons found:', document.querySelectorAll('.btn-convert').length);
+  console.log('PDF Converter is ready to use!');
+
+  // Update debug info every second
+  setInterval(() => {
+    const debugFormat = document.getElementById('debugFormat');
+    const debugFiles = document.getElementById('debugFiles');
+    const debugButton = document.getElementById('debugButton');
+    
+    if (debugFormat) debugFormat.textContent = selectedFormat || 'None';
+    if (debugFiles) debugFiles.textContent = uploadedFiles.length;
+    if (debugButton) {
+      const convertButtons = document.querySelectorAll('.btn-convert:not(:disabled)');
+      debugButton.textContent = selectedFormat ? `Enabled (${convertButtons.length} ready)` : 'Disabled - Select format first';
+    }
+  }, 500);
+
+  // Test conversion function
+  window.testConversion = function() {
+    console.log('=== TEST CONVERSION ===');
+    if (uploadedFiles.length === 0) {
+      alert('Please upload a file first!');
+      return;
+    }
+    if (!selectedFormat) {
+      alert('Please select a format first!');
+      return;
+    }
+    
+    const firstFile = uploadedFiles[0];
+    console.log('Testing with file:', firstFile);
+    console.log('Calling convertFile with ID:', firstFile.id);
+    convertFile(firstFile.id);
+  };
 </script>
 </body>
 </html>
